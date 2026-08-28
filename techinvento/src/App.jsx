@@ -1,5 +1,38 @@
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { useState } from "react";
 import "./App.css";
+
+const gadgetColumns = [
+  {
+    accessorKey: "deviceName",
+    header: "Gadget Name",
+  },
+  {
+    accessorKey: "deviceType",
+    header: "Category",
+  },
+  {
+    accessorKey: "maker",
+    header: "Manufacturer",
+  },
+  {
+    accessorKey: "healthScore",
+    header: "Health Rating",
+  },
+  {
+    accessorKey: "brand",
+    header: "Tech Brand Name",
+  },
+  {
+    accessorKey: "role",
+    header: "User Role",
+  },
+];
 
 function App() {
   const [deviceName, setDeviceName] = useState("");
@@ -8,6 +41,12 @@ function App() {
   const [healthScore, setHealthScore] = useState("");
   const [brand, setBrand] = useState("");
   const [role, setRole] = useState("");
+  const [gadgets, setGadgets] = useState([]);
+  const [currentView, setCurrentView] = useState("form");
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 3,
+  });
 
   const [nameError, setNameError] = useState("");
   const [typeError, setTypeError] = useState("");
@@ -15,6 +54,17 @@ function App() {
   const [scoreError, setScoreError] = useState("");
   const [brandError, setBrandError] = useState("");
   const [roleError, setRoleError] = useState("");
+
+  const gadgetTable = useReactTable({
+    data: gadgets,
+    columns: gadgetColumns,
+    state: {
+      pagination,
+    },
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
 
   const checkDeviceName = (value) => {
     if (value.trim() === "") {
@@ -107,13 +157,37 @@ function App() {
     if (!everythingOkay) {
       return;
     }
+
+    const newGadget = {
+      id: Date.now(),
+      deviceName,
+      deviceType,
+      maker,
+      healthScore: Number(healthScore),
+      brand,
+      role,
+    };
+
+    setGadgets([...gadgets, newGadget]);
+    setPagination({
+      pageIndex: Math.floor(gadgets.length / 3),
+      pageSize: 3,
+    });
+    setDeviceName("");
+    setDeviceType("");
+    setMaker("");
+    setHealthScore("");
+    setBrand("");
+    setRole("");
+    setCurrentView("registry");
   };
 
   return (
     <>
       <h1>Tech Gadget & Inventory Hub</h1>
 
-      <form onSubmit={handleSubmit} noValidate>
+      {currentView === "form" ? (
+        <form onSubmit={handleSubmit} noValidate>
         <div>
           <label htmlFor="deviceName">Gadget Name</label>
           <input
@@ -233,8 +307,74 @@ function App() {
           {roleError && <p>{roleError}</p>}
         </div>
 
-        <button type="submit">Submit</button>
-      </form>
+          <button type="submit">Submit</button>
+        </form>
+      ) : (
+        <div>
+          <h2>Gadget Registry</h2>
+
+          <button type="button" onClick={() => setCurrentView("form")}>
+            Add Another Gadget
+          </button>
+
+          <table>
+            <thead>
+              {gadgetTable.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+
+            <tbody>
+              {gadgetTable.getRowModel().rows.map((row) => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => gadgetTable.previousPage()}
+              disabled={!gadgetTable.getCanPreviousPage()}
+            >
+              Previous
+            </button>
+
+            <p>
+              Page {gadgetTable.getState().pagination.pageIndex + 1} of{" "}
+              {gadgetTable.getPageCount()}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => gadgetTable.nextPage()}
+              disabled={!gadgetTable.getCanNextPage()}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
